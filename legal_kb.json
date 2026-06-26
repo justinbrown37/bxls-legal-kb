@@ -1,1 +1,13 @@
-﻿{
+{
+  "cites": {
+    "test": "Test Case v. Example, 1 N.Y.2d 1 (2024)"
+  },
+  "issueModules": [
+    {
+      "id": "test_module",
+      "title": "Test module",
+      "when": "Testing",
+      "cites": ["test"]
+    }
+  ]
+}
