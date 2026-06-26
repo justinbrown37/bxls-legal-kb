@@ -211,20 +211,26 @@ def connect(cfg: dict) -> imaplib.IMAP4_SSL:
 
 
 def search_packets(imap: imaplib.IMAP4_SSL, mailbox: str, subject: str) -> list[bytes]:
-    """Return message UIDs whose subject contains `subject`."""
+    """Return candidate message UIDs whose subject likely matches `subject`.
+
+    We search by a single keyword (no spaces) so there are no IMAP quoting
+    issues, then the caller filters down to the full phrase. This is far more
+    robust across mail servers than trying to send a quoted multi-word query.
+    """
     status, _ = imap.select(f'"{mailbox}"', readonly=True)
     if status != "OK":
         # Fall back to the plain inbox if the Gmail folder name isn't available.
         print(f"Could not open mailbox {mailbox!r}; falling back to INBOX.")
         imap.select("INBOX", readonly=True)
 
-    # Prefer Gmail's own search syntax (most reliable); fall back to IMAP SUBJECT.
+    # Pick the longest word in the target phrase as a single-token search key.
+    words = [w for w in re.findall(r"[A-Za-z0-9]+", subject) if len(w) >= 3]
+    keyword = max(words, key=len) if words else subject
+
     try:
-        status, data = imap.uid("SEARCH", None, "X-GM-RAW", f'subject:"{subject}"')
-        if status != "OK":
-            raise imaplib.IMAP4.error(status)
+        status, data = imap.uid("SEARCH", None, "SUBJECT", keyword)
     except imaplib.IMAP4.error:
-        status, data = imap.uid("SEARCH", None, "SUBJECT", subject)
+        status, data = "NO", None
 
     if status != "OK" or not data or not data[0]:
         return []
@@ -556,21 +562,31 @@ def main() -> None:
             print(f"No emails found with subject containing {subject!r}.")
             return
         uids = list(reversed(uids))  # newest first
-        if args.limit > 0:
-            uids = uids[: args.limit]
-        print(f"Found {len(uids)} matching email(s).")
 
         session = requests.Session()
         nyscef_rows: list[dict] = []
         totals = {"downloaded": 0, "skipped_existing": 0, "nyscef": 0, "failed": 0}
 
+        phrase = subject.lower()
+        processed = 0
         for uid in uids:
             msg = fetch_message(imap, uid)
             if msg is None:
                 continue
+            # Keep only emails whose subject really contains the full phrase.
+            if phrase not in decode_header(msg.get("Subject")).lower():
+                continue
             counts = process_packet(msg, output_dir, session, nyscef_rows)
             for k in totals:
                 totals[k] += counts[k]
+            processed += 1
+            if args.limit > 0 and processed >= args.limit:
+                break
+
+        if processed == 0:
+            print(f"No emails found with subject containing {subject!r}.")
+            return
+        print(f"Processed {processed} matching packet email(s).")
     finally:
         try:
             imap.logout()
