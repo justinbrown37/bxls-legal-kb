@@ -1,13 +1,162 @@
 {
   "cites": {
-    "test": "Test Case v. Example, 1 N.Y.2d 1 (2024)"
+    "westpierre": "West Pierre Assoc. LLC v. Harvey, 241 A.D.3d 411 (1st Dept 2025)",
+    "chazon": "Chazon, LLC v. Maugenest, 19 N.Y.3d 410 (2012)",
+    "smalls": "E. Harlem MEC Parcel C, L.P. v. Smalls, 82 Misc. 3d 127(A) (App. Term, 1st Dept 2024)",
+    "mautnerglick": "Mautner-Glick Corp. v. Higgins, 64 Misc. 3d 16 (App. Term, 1st Dept 2019)",
+    "leon": "Leon v. Martinez, 84 N.Y.2d 83 (1994)",
+    "edwards170": "170 NY Properties LLC v. Edwards, 85 Misc. 3d 1068 (Civ. Ct., N.Y. County 2024)",
+    "creston": "2075 Creston Ave. Realty LLC v. Colon, 2025 NY Slip Op 35141(U) (Civ. Ct., Bronx County 2025)",
+    "alvarado": "Intercontinental St. Nicholas Assoc. LLC v. Alvarado, 2025 NY Slip Op 35131(U) (Civ. Ct., N.Y. County 2025)",
+    "armillas": "BPP St. Owner LLC v. Armillas, 2026 NY Slip Op 30048(U) (Civ. Ct., N.Y. County 2026)",
+    "phillip": "1362 Ocean LLC v. Phillip, 2026 NY Slip Op 30070(U) (Civ. Ct., Kings County 2026)",
+    "cataldo": "Stahl Assoc. LLC v. Cataldo, 2026 NY Slip Op 30085(U) (Civ. Ct., N.Y. County 2026)",
+    "corst": "Corst v. Mushailov, 2026 NY Slip Op 50071(U) (Civ. Ct., Kings County 2026)",
+    "mdl301": "Multiple Dwelling Law § 301",
+    "mdl302": "Multiple Dwelling Law § 302",
+    "nycrr20842": "22 NYCRR § 208.42(b)",
+    "ao16319": "Administrative Order AO/163/19 (mandatory Notice of Petition form)",
+    "globalrealty": "Global Realty Mgmt. NY, LLC v. Wiatrowicz, Index No. LT-319695-24/QU (Civ. Ct., Queens County 2026)",
+    "karlsen": "Karlsen v. Hasson-McKenzie, 2026 NY Slip Op 50124(U) (City Ct., Ithaca, Tompkins County 2026)",
+    "toscano": "Parkway MHC, LLC v. Toscano, 2026 NY Slip Op 50149(U) (Just. Ct., Town of Haverstraw, Rockland County 2026)",
+    "frederick": "Parkchester Preserv. Co. LP v. Frederick, 2026 NY Slip Op 50150(U) (Civ. Ct., Bronx County 2026)",
+    "aras": "Aras v. B-U Realty Corp., 2026 NY Slip Op 00637 (Ct. App. 2026)",
+    "burrows": "Burrows v. 75-25 153rd St., LLC, 44 N.Y.3d 74 (2025)",
+    "calvaryhicks": "Calvary Grandparents Residence LLC v. Hicks, Index No. LT-304766-25/QU (Civ. Ct., Queens County 2026)",
+    "chisholm": "RP Wimbledon Owner, LLC v. Chisholm, 86 Misc. 3d 1075 (Civ. Ct., N.Y. County 2025)",
+    "gates1719": "1719 Gates LLC v. Torres, 85 Misc. 3d 906 (Civ. Ct., Queens County 2024)",
+    "westchestercap": "Westchester Capital Co., LLC v. Richardson, 86 Misc. 3d 1211(A) (Civ. Ct., N.Y. County 2025)",
+    "severine": "EOM 106-15 217th Corp. v. Severine, 62 Misc. 3d 141(A) (App. Term, 2d Dept 2019)",
+    "ryerson": "Ryerson Towers, Inc. v. Estate of Brown, 160 Misc. 2d 107 (App. Term, 2d Dept 1994)",
+    "rpl216": "Real Property Law § 216 (Good Cause Eviction Law)",
+    "rpl217": "Real Property Law § 217",
+    "rpl231c": "Real Property Law § 231-c",
+    "rpapl711_1": "RPAPL § 711(1)",
+    "cplr1001": "CPLR § 1001 (necessary-party joinder)",
+    "cplr3211a10": "CPLR § 3211(a)(10)",
+    "cplr5015": "CPLR § 5015(a)(1)",
+    "rsl26516": "Rent Stabilization Law (Admin. Code) § 26-516(a)"
   },
   "issueModules": [
     {
-      "id": "test_module",
-      "title": "Test module",
-      "when": "Testing",
-      "cites": ["test"]
+      "id": "cofo",
+      "title": "No valid certificate of occupancy bars rent (MDL 301/302)",
+      "when": "Unit created/altered or building occupied without a valid C of O",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["occupancy", "habitability"],
+      "strength": "strong (Court of Appeals + App Term)",
+      "posture": "FAVORABLE",
+      "cites": ["mdl301", "mdl302", "chazon", "smalls", "edwards170"]
+    },
+    {
+      "id": "nop_form",
+      "title": "Notice of Petition fails to use mandatory court form",
+      "when": "NoP does not conform to 22 NYCRR 208.42(b) / AO 163/19",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["predicate_notice", "procedural"],
+      "strength": "moderate (trial-level, growing; verify)",
+      "posture": "FAVORABLE",
+      "cites": ["nycrr20842", "ao16319"]
+    },
+    {
+      "id": "rs_overcharge_posthstpa",
+      "title": "Overcharge discovery for post-HSTPA tenancies",
+      "when": "Tenancy began after 6/14/2019 and rent history looks unreliable",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["rent_overcharge", "rent_stabilization"],
+      "strength": "first dept appellate (Harvey)",
+      "posture": "FAVORABLE",
+      "cites": ["westpierre", "creston", "mautnerglick"]
+    },
+    {
+      "id": "mdl302a_rent_impairing",
+      "title": "Rent-impairing violations -> abatement/dismissal",
+      "when": "Open rent-impairing HPD violations, incl. common-area roof leaks",
+      "caseType": ["nonpayment"],
+      "issues": ["habitability", "violations"],
+      "strength": "trial-level; pairs with existing habitability module",
+      "posture": "FAVORABLE",
+      "cites": ["phillip", "edwards170"]
+    },
+    {
+      "id": "discovery_ample_need",
+      "title": "Farkas six-factor ample-need discovery test",
+      "when": "Building a discovery motion in a summary proceeding",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["discovery", "procedural"],
+      "strength": "framework reference",
+      "posture": "NEUTRAL",
+      "cites": ["cataldo", "mautnerglick"]
+    },
+    {
+      "id": "gcel_nonpay_notice_defect",
+      "title": "GCEL non-renewal holdover grounded on nonpayment requires a notice stating a good-faith amount owed, the months owed, and the increase percentage",
+      "when": "Good Cause non-renewal holdover where the 'good cause' is nonpayment, and the 90-day termination notice omits the rent amount, the periods owed, or the percentage of any increase — defect precludes the tenant's pre-warrant cure right and requires dismissal",
+      "caseType": ["holdover"],
+      "issues": ["good_cause_eviction", "predicate_notice", "nonpayment"],
+      "strength": "trial-level; multiple Civ. Ct. decisions aligning (verify currency)",
+      "posture": "FAVORABLE",
+      "cites": ["globalrealty", "chisholm", "severine", "westchestercap", "gates1719", "rpl216"]
+    },
+    {
+      "id": "dv_default_vacatur",
+      "title": "Domestic-violence / mental-health incapacity can supply a reasonable excuse to vacate a default under CPLR 5015(a)(1)",
+      "when": "Respondent defaulted while incapacitated by trauma/DV (e.g., hospitalization, PTSD, depression with medical documentation), now has counsel and a potentially meritorious defense",
+      "caseType": ["holdover", "nonpayment"],
+      "issues": ["default_vacatur", "procedural"],
+      "strength": "trial-level; applies the standard 5015 two-prong test",
+      "posture": "FAVORABLE",
+      "cites": ["globalrealty", "cplr5015"]
+    },
+    {
+      "id": "gcel_no_new_cause_conditional_limitation",
+      "title": "GCEL (RPL 216) creates no independent cause of action; early-termination holdovers still require a conditional limitation, not a mere condition subsequent",
+      "when": "Holdover premised on a lease option-to-terminate clause (condition subsequent) rather than an automatic conditional limitation; or landlord argues the Good Cause statute itself authorizes the holdover. A bare option-to-terminate gives only ejectment under RPAPL art. 6, not a summary proceeding",
+      "caseType": ["holdover"],
+      "issues": ["good_cause_eviction", "conditional_limitation", "jurisdiction"],
+      "strength": "trial-level (applies 3d Dept law); persuasive in NYC — verify against 1st/2d Dept",
+      "posture": "FAVORABLE",
+      "cites": ["karlsen", "rpl216", "rpl217", "rpapl711_1"]
+    },
+    {
+      "id": "overcharge_fraud_exception_lookback",
+      "title": "Fraud exception to the rent-overcharge lookback needs only 'sufficient indicia of fraud' or a 'colorable claim' — not every element of common-law fraud",
+      "when": "Rent overcharge claim where landlord invokes the four-year (or RSL 26-516(a)) lookback to bar review, and tenant can point to indicia of a fraudulent deregulation/registration scheme",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["rent_overcharge", "rent_stabilization", "fraud"],
+      "strength": "STRONG — Court of Appeals (Aras applying Burrows)",
+      "posture": "FAVORABLE",
+      "cites": ["aras", "burrows", "rsl26516"]
+    },
+    {
+      "id": "deceased_tenant_estate_necessary_party",
+      "title": "Where a deceased tenant of record's unexpired lease was in effect at commencement, the estate is a necessary party and the failure to name it warrants dismissal",
+      "when": "Holdover (including licensee) against an occupant after the tenant of record died, where an unexpired lease was still in effect when the case was commenced but the estate / a Surrogate's-appointed representative was not named. Note: court may order joinder (CPLR 1003) rather than dismiss — fact-dependent",
+      "caseType": ["holdover"],
+      "issues": ["necessary_party", "deceased_tenant", "succession", "procedural"],
+      "strength": "trial-level; outcome turns on whether the lease was genuinely unexpired",
+      "posture": "FAVORABLE",
+      "cites": ["calvaryhicks", "cplr3211a10", "cplr1001", "ryerson"]
+    },
+    {
+      "id": "necessary_party_joinder_excused",
+      "title": "DISTINGUISH (landlord-favorable): a missing estate may NOT be a necessary party where the CPLR 1001(b) five discretionary factors favor proceeding without joinder",
+      "when": "You move to dismiss for non-joinder of an estate, but the absent party's interests are not immediately/inequitably affected (e.g., no immediate sale of the home, and the movant could just as easily seek appointment of a representative)",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["necessary_party", "procedural"],
+      "strength": "trial-level counterweight to the necessary-party defense",
+      "posture": "UNFAVORABLE — distinguish by showing the absent party IS immediately/inequitably affected and an unexpired lease exists (cf. Calvary/Hicks)",
+      "cites": ["toscano", "cplr1001"]
+    },
+    {
+      "id": "default_excuse_belief_fake_insufficient",
+      "title": "DISTINGUISH (landlord-favorable): a belief that the papers were 'fake,' without diligent inquiry, is not a reasonable excuse to vacate a default",
+      "when": "Respondent seeks to vacate a default claiming they thought the summons was illegitimate, but had received prior demand letters / court correspondence and made no real inquiry. (Frederick was a civil rent-debt action, but the 5015 reasoning applies to summary proceedings too)",
+      "caseType": ["nonpayment", "holdover"],
+      "issues": ["default_vacatur", "procedural"],
+      "strength": "trial-level (Bronx); landlord-favorable on excusable default",
+      "posture": "UNFAVORABLE — distinguish by showing diligent inquiry, no prior notice, or by pairing with a strong meritorious defense",
+      "cites": ["frederick", "cplr5015"]
     }
   ]
 }
