@@ -40,18 +40,54 @@ from email.message import Message
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
-try:
-    import requests
-except ImportError:  # pragma: no cover - guidance for the user
-    sys.exit("Missing dependency 'requests'. Run:  pip install -r requirements.txt")
+def _ensure_deps() -> None:
+    """Install third-party packages the first time the tool is run.
 
-try:
-    from bs4 import BeautifulSoup
-except ImportError:  # pragma: no cover
-    sys.exit("Missing dependency 'beautifulsoup4'. Run:  pip install -r requirements.txt")
+    This lets a non-programmer run the script with nothing but Python
+    installed — no separate 'pip install' step needed.
+    """
+    import importlib
+    import subprocess
 
-# xhtml2pdf is only needed to turn .htm decision pages into PDFs. We import it
-# lazily so the rest of the tool still works if it isn't installed.
+    required = {"requests": "requests", "bs4": "beautifulsoup4"}
+    optional = {"xhtml2pdf": "xhtml2pdf"}  # only for .htm -> PDF conversion
+
+    missing = []
+    for mod, pkg in {**required, **optional}.items():
+        try:
+            importlib.import_module(mod)
+        except ImportError:
+            missing.append(pkg)
+
+    if missing:
+        print("First-time setup: downloading a few components (about a minute)...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "--quiet", *missing]
+            )
+            print("Setup complete.\n")
+        except Exception as exc:
+            print(f"(Automatic setup had a problem: {exc})")
+
+    # Hard requirement check — requests + BeautifulSoup must be importable.
+    for mod, pkg in required.items():
+        try:
+            importlib.import_module(mod)
+        except ImportError:
+            sys.exit(
+                f"Could not load required component '{pkg}'.\n"
+                f"Please open Command Prompt and run:\n"
+                f"    pip install {' '.join(required.values())}"
+            )
+
+
+_ensure_deps()
+
+import requests  # noqa: E402
+from bs4 import BeautifulSoup  # noqa: E402
+
+# xhtml2pdf is imported lazily inside html_to_pdf so the tool still runs if it
+# isn't installed (it falls back to saving the decision as HTML).
 IMAP_HOST = "imap.gmail.com"
 DEFAULT_MAILBOX = "[Gmail]/All Mail"
 DEFAULT_SUBJECT = "housing case packet"
@@ -97,16 +133,52 @@ def load_config(config_path: Path) -> dict:
     cfg["email"] = os.environ.get("GMAIL_ADDRESS", cfg["email"])
     cfg["app_password"] = os.environ.get("GMAIL_APP_PASSWORD", cfg["app_password"])
 
+    prompted = False
     if not cfg["email"]:
-        cfg["email"] = input("Gmail address: ").strip()
+        cfg["email"] = input("Enter your Gmail address: ").strip()
+        prompted = True
     if not cfg["app_password"]:
+        print("\nYou need a Gmail 'App Password' (NOT your normal password).")
+        print("If you don't have one yet, follow the setup steps first, then re-run.\n")
         cfg["app_password"] = getpass.getpass(
-            "Gmail App Password (16 chars, hidden as you type): "
+            "Paste your 16-character App Password (it stays hidden as you type): "
         ).strip()
+        prompted = True
 
     # App passwords are often shown with spaces; IMAP wants them removed.
     cfg["app_password"] = cfg["app_password"].replace(" ", "")
+
+    # Offer to remember the details so it's one-click next time.
+    if prompted and cfg["email"] and cfg["app_password"]:
+        answer = input(
+            "\nSave these so you don't have to type them next time? [Y/n]: "
+        ).strip().lower()
+        if answer in ("", "y", "yes"):
+            save_config(config_path, cfg)
+            print(f"Saved to {config_path.name} (keep that file private).\n")
+
     return cfg
+
+
+def save_config(config_path: Path, cfg: dict) -> None:
+    """Write credentials back to config.ini so future runs don't prompt."""
+    parser = configparser.ConfigParser()
+    if config_path.exists():
+        parser.read(config_path)
+    if not parser.has_section("gmail"):
+        parser.add_section("gmail")
+    parser.set("gmail", "email", cfg["email"])
+    parser.set("gmail", "app_password", cfg["app_password"])
+    if not parser.has_section("settings"):
+        parser.add_section("settings")
+        parser.set("settings", "output_dir", "")
+        parser.set("settings", "mailbox", "")
+        parser.set("settings", "subject", "")
+    try:
+        with open(config_path, "w", encoding="utf-8") as fh:
+            parser.write(fh)
+    except Exception as exc:
+        print(f"(Could not save settings: {exc})")
 
 
 def default_output_dir() -> Path:
@@ -521,5 +593,27 @@ def main() -> None:
     print(f"Folder               : {output_dir}")
 
 
+def _run() -> None:
+    """Run main(), but keep the window open so a double-click user can read
+    the summary or any error message before the console closes."""
+    try:
+        main()
+    except SystemExit as exc:
+        # sys.exit("message") lands here; show the message ourselves.
+        if exc.code and not isinstance(exc.code, int):
+            print("\n" + str(exc.code))
+    except KeyboardInterrupt:
+        print("\nCancelled.")
+    except Exception:
+        import traceback
+        print("\nSomething went wrong:\n")
+        traceback.print_exc()
+    finally:
+        try:
+            input("\nDone. Press Enter to close this window...")
+        except EOFError:
+            pass
+
+
 if __name__ == "__main__":
-    main()
+    _run()

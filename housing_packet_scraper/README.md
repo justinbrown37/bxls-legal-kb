@@ -1,112 +1,109 @@
-# Housing Case Packet downloader
+# Housing Case Packet downloader — simple setup guide
 
-Automatically pulls every **"Housing Case Packet"** email out of your Gmail and
-saves the court decisions linked inside them as PDFs on your computer, organized
-into one folder per weekly packet.
+This tool reads your Gmail, finds every **"Housing Case Packet"** email, and
+downloads the court decisions linked inside them as PDFs into a folder on your
+PC — one folder per weekly packet.
 
-- ✅ Official NY court decisions on `nycourts.gov` are downloaded as PDF
-  (direct PDFs are saved as-is; `.htm` slip-opinion pages are converted to PDF).
-- 🔒 **NYSCEF** documents (`iapps.courts.state.ny.us`) are login-walled and have
-  anti-scraping protections, so the tool does **not** try to scrape them.
-  Instead it writes them to `_NYSCEF_manual_download.csv` so you can open and
-  save those by hand.
-- Statute / reference links (NY Senate, AmLegal, Cornell, etc.) are ignored.
+You do **not** need to know any programming. You just install Python once, save
+one file, and double-click it. The tool asks for your email and password the
+first time and remembers them after that.
 
-The tool is **read-only** for your email and **safe to re-run** — anything you
-already downloaded is skipped.
+> NYSCEF documents are login-protected and not downloaded automatically. They're
+> listed in a file called `_NYSCEF_manual_download.csv` so you can open those by
+> hand. Everything from the public court website (`nycourts.gov`) is downloaded.
 
 ---
 
-## One-time setup (Windows)
+## Step 1 — Install Python (one time, ~3 minutes)
 
-### 1. Install Python
-Download Python 3.10+ from <https://www.python.org/downloads/windows/> and run
-the installer. **On the first screen, check "Add python.exe to PATH."**
+1. Go to **<https://www.python.org/downloads/>** and click the big yellow
+   **"Download Python"** button.
+2. Open the file that downloads (it's in your Downloads folder).
+3. **IMPORTANT:** On the very first screen of the installer, check the box at the
+   bottom that says **"Add python.exe to PATH"**. ✅
+4. Click **"Install Now"** and wait for it to finish. Click Close.
 
-### 2. Get the files
-Put this `housing_packet_scraper` folder somewhere easy, e.g. your Desktop.
-
-### 3. Install the dependencies
-Open **Command Prompt** (press Start, type `cmd`, Enter), then:
-
-```
-cd %USERPROFILE%\Desktop\housing_packet_scraper
-pip install -r requirements.txt
-```
-
-### 4. Create a Gmail App Password
-A normal Gmail password won't work over IMAP. You need a 16-character
-*App Password*:
-
-1. Turn on 2-Step Verification: <https://myaccount.google.com/security>
-2. Create an App Password: <https://myaccount.google.com/apppasswords>
-   (name it anything, e.g. "Housing packets"). Google shows you 16 characters.
-3. Make sure IMAP is enabled: Gmail → Settings (gear) → **See all settings** →
-   **Forwarding and POP/IMAP** → **Enable IMAP** → Save.
-
-### 5. Fill in your config
-Copy `config.example.ini` to `config.ini` and open it in Notepad. Put in your
-email address and the 16-character App Password. Save.
-
-> `config.ini` is gitignored, so your password is never committed to the repo.
-> If you'd rather not store it in a file, leave `app_password` blank and the
-> script will prompt you for it (hidden) each time you run it.
+That's the only software you need to install.
 
 ---
 
-## Running it
+## Step 2 — Get a Gmail "App Password" (one time, ~3 minutes)
 
-From the same Command Prompt:
+Gmail won't let a program use your normal password, so you create a special
+16-character one just for this tool.
+
+1. Turn on 2-Step Verification (if it isn't already):
+   **<https://myaccount.google.com/security>** → "2-Step Verification".
+2. Go to **<https://myaccount.google.com/apppasswords>**.
+3. Type a name like **Housing packets** and click **Create**.
+4. Google shows you **16 letters** in a box. Leave this open / copy it — you'll
+   paste it into the tool in Step 4. (Spaces don't matter.)
+5. Also make sure IMAP is on: in Gmail, click the ⚙️ gear → **See all settings**
+   → **Forwarding and POP/IMAP** → choose **Enable IMAP** → **Save Changes**.
+
+---
+
+## Step 3 — Save the tool to your Desktop (one time)
+
+1. Open this file on GitHub:
+   **`housing_packet_scraper/fetch_housing_packets.py`**
+2. Click the **download icon** (a downward arrow ⬇, near the top-right of the
+   file view). This saves `fetch_housing_packets.py` to your Downloads.
+3. Move that file to your **Desktop** so it's easy to find.
+
+---
+
+## Step 4 — Run it
+
+1. **Double-click** `fetch_housing_packets.py` on your Desktop. A black window
+   opens.
+   - The first time, it spends about a minute setting itself up — that's normal.
+2. It asks for your **Gmail address** — type it and press Enter.
+3. It asks for your **App Password** — paste the 16 characters from Step 2 and
+   press Enter. (You won't see anything appear as you paste — that's intentional.)
+4. It offers to remember these — press Enter for yes.
+5. It downloads everything and prints a summary.
+
+Your decisions are now here:
 
 ```
-python fetch_housing_packets.py
-```
-
-That's it. You'll see it find the packets, download decisions, and print a
-summary. By default everything lands in:
-
-```
-C:\Users\<you>\Documents\HousingCasePackets\
+Documents\HousingCasePackets\
     2026-02-24 - Housing Case Packet\
         West Side Marquis LLC v Maldonado - 2026_01023.pdf
         ...
-    _NYSCEF_manual_download.csv
+    _NYSCEF_manual_download.csv   (links to open by hand)
 ```
 
-### Options
-
-```
-python fetch_housing_packets.py --output "D:\Cases"   # save somewhere else
-python fetch_housing_packets.py --limit 3             # only the 3 newest packets
-python fetch_housing_packets.py --subject "housing case packet"
-python fetch_housing_packets.py --help
-```
+**To get new packets later, just double-click the file again.** It skips
+anything you already have and only grabs what's new.
 
 ---
 
-## How it decides what to download
+## If something goes wrong
 
-| Link in the email                                   | Action                         |
-| --------------------------------------------------- | ------------------------------ |
-| `nycourts.gov/reporter/.../*.pdf`                   | Download the PDF               |
-| `nycourts.gov/reporter/.../*.htm`                   | Convert the decision to PDF    |
-| `iapps.courts.state.ny.us/nyscef/...`               | Log to CSV (manual download)   |
-| Statutes / other reference links                    | Ignored                        |
+The window stays open and shows a message — here are the common ones:
 
-## Troubleshooting
+- **"Login failed"** → The most common cause is using your normal password
+  instead of the **App Password** from Step 2. Also confirm 2-Step Verification
+  is on and IMAP is enabled in Gmail settings.
+- **The window flashes and closes instantly** → Python probably didn't install
+  with "Add to PATH" checked. Re-run the Python installer (Step 1), choose
+  "Modify," and make sure that box is checked.
+- **A few files saved as `.html` instead of `.pdf`** → That page wouldn't
+  convert; the `.html` file opens fine in any browser, and you can print it to
+  PDF from there if you want.
+- **"No emails found"** → Make sure you're signing in with the same Gmail
+  account that has the packets.
 
-- **"Login failed"** — Double-check you used an *App Password* (not your normal
-  password), that 2-Step Verification is on, and that IMAP is enabled in Gmail.
-- **"Missing dependency"** — Re-run `pip install -r requirements.txt`.
-- **A few decisions saved as `.html` instead of `.pdf`** — The PDF renderer
-  couldn't handle that particular page; the `.html` file opens fine in any
-  browser and you can print-to-PDF from there if you want.
-- **Nothing found** — Confirm the emails really are in this account and the
-  subject contains "housing case packet" (run with `--subject` to adjust).
+If you're stuck, send me the text from that black window and I'll sort it out.
 
-## Note on NYSCEF / authorized use
+---
 
-This tool only downloads decisions from the public New York State Law Reporting
-Bureau site (`nycourts.gov`). It deliberately does **not** circumvent NYSCEF's
-access controls or anti-scraping measures — those documents are listed for you
-to retrieve manually through normal, authorized access.
+### For the technically curious
+
+- `config.ini` (created when you choose "remember") stores your settings and is
+  gitignored so it's never uploaded. You can also set `GMAIL_ADDRESS` /
+  `GMAIL_APP_PASSWORD` environment variables instead.
+- Command-line options: `--output <folder>`, `--limit <N>`, `--subject <text>`,
+  `--help`.
+- The tool reads mail read-only and never sends or deletes anything.
