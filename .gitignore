@@ -1,0 +1,11 @@
+# Local credentials — never commit
+housing_packet_scraper/config.ini
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Downloaded output (in case anyone points it inside the repo)
+HousingCasePackets/
