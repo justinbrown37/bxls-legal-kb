@@ -180,7 +180,13 @@ Return ONLY a JSON object (no markdown, no backticks):
     body: JSON.stringify({ model: MODEL, max_tokens: 1024, messages: [{ role: "user", content: prompt }] }),
   });
   if (!resp.ok) {
-    console.warn(`  ! Claude triage failed: HTTP ${resp.status}`);
+    let detail = "";
+    try {
+      detail = JSON.stringify(await resp.json());
+    } catch (e) {
+      detail = await resp.text().catch(() => "");
+    }
+    console.warn(`  ! Claude triage failed: HTTP ${resp.status} ${String(detail).slice(0, 400)}`);
     return null;
   }
   const data = await resp.json();
