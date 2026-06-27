@@ -3,10 +3,10 @@ import { storage } from "./storage";
 import { BUNDLED_KB, KB_META } from "./kb";
 
 /*
-  BxLS Pleading Drafter — v3
-  --------------------------
+  Tenant Defense Drafter — v3
+  ---------------------------
   Tenant-defense pleading drafting assistant for Bronx Housing Court summary
-  proceedings (nonpayment + holdover). Built for Bronx Legal Services.
+  proceedings (nonpayment + holdover).
   Attorney-in-the-loop: every output is a DRAFT requiring independent legal
   judgment, verification, and Shepardizing before filing.
 
@@ -481,22 +481,8 @@ function selectedCiteList(selectedIssues) {
   return Array.from(set);
 }
 
-function buildExtractionPrompt(id) {
-  const slot = DOC_SLOTS.find((s) => s.id === id);
-  const guidance = DOC_GUIDANCE[id] || "Extract any facts relevant to defending a Bronx Housing Court summary proceeding.";
-  return `You are reading a document for a tenant-defense attorney at Bronx Legal Services preparing to defend a summary proceeding (nonpayment or holdover) in Bronx Housing Court.
-
-Read the attached document and extract ONLY facts you can verify from its text. Do not guess. If a field is not addressed by this document, leave it empty (for strings) or null (for booleans). Current law is post-HSTPA (2019): a residential rent demand is a 14-day demand, never a 3-day demand.
-
-DOCUMENT TYPE: ${slot ? slot.label : id}
-WHAT TO LOOK FOR IN THIS DOCUMENT:
-${guidance}
-
-For any boolean, set true ONLY if the document affirmatively supports it. Never set a boolean to false; use null when the document does not address it.
-
-Return ONLY a JSON object (no markdown, no backticks, no preamble) in exactly this shape:
-{
-  "fields": {
+// Shared shape for everything the extractor pulls out of a document.
+const EXTRACTION_FIELDS = `  "fields": {
     "petitioner": "",
     "respondent": "",
     "premises": "",
@@ -525,7 +511,47 @@ Return ONLY a JSON object (no markdown, no backticks, no preamble) in exactly th
     "noticeDateConflict": null,
     "noValidCofO": null,
     "wrongNopForm": null
-  },
+  }`;
+
+const EXTRACTION_RULES = `Read the attached document and extract ONLY facts you can verify from its text. Do not guess. If a field is not addressed by this document, leave it empty (for strings) or null (for booleans). For any boolean, set true ONLY if the document affirmatively supports it; never set a boolean to false. Current law is post-HSTPA (2019): a residential rent demand is a 14-day demand, never a 3-day demand.`;
+
+function buildExtractionPrompt(id) {
+  const slot = DOC_SLOTS.find((s) => s.id === id);
+  const guidance = DOC_GUIDANCE[id] || "Extract any facts relevant to defending a Bronx Housing Court summary proceeding.";
+  return `You are reading a document for a tenant-defense attorney preparing to defend a summary proceeding (nonpayment or holdover) in Bronx Housing Court.
+
+${EXTRACTION_RULES}
+
+DOCUMENT TYPE: ${slot ? slot.label : id}
+WHAT TO LOOK FOR IN THIS DOCUMENT:
+${guidance}
+
+Return ONLY a JSON object (no markdown, no backticks, no preamble) in exactly this shape:
+{
+${EXTRACTION_FIELDS},
+  "findings": "One to three sentences: what this document shows and why it matters for the tenant's defense. Note anything the attorney must verify."
+}`;
+}
+
+// Auto-detect: one prompt that first CLASSIFIES the document, then extracts.
+function buildAutoExtractionPrompt() {
+  const typeList = DOC_SLOTS.map((s) => `- "${s.id}": ${s.label}`).join("\n");
+  const allGuidance = DOC_SLOTS.map((s) => `[${s.id}] ${s.label}\n${DOC_GUIDANCE[s.id] || "Extract any facts relevant to defending the proceeding."}`).join("\n\n");
+  return `You are reading ONE document from a tenant-defense attorney's case file for a summary proceeding (nonpayment or holdover) in Bronx Housing Court. You do not know in advance what kind of document this is.
+
+STEP 1 — CLASSIFY. Decide which ONE of these document types the attached document is, and return its id in "docType". If none fits, use "other".
+${typeList}
+
+STEP 2 — EXTRACT. Using the extraction guidance for whichever type you identified, pull out the verifiable facts. ${EXTRACTION_RULES}
+
+EXTRACTION GUIDANCE BY TYPE (apply only the block matching your classification):
+${allGuidance}
+
+Return ONLY a JSON object (no markdown, no backticks, no preamble) in exactly this shape:
+{
+  "docType": "<one id from the list above, or 'other'>",
+  "docLabel": "<short human-readable label for what this document is>",
+${EXTRACTION_FIELDS},
   "findings": "One to three sentences: what this document shows and why it matters for the tenant's defense. Note anything the attorney must verify."
 }`;
 }
@@ -566,7 +592,7 @@ INDEX NUMBER: ${f.indexNumber || "L&T __________/____"}
 PETITIONER: ${f.petitioner || "____"}
 RESPONDENT(S): ${f.respondent || "____"}${f.includeDoes ? '; "JOHN DOE" and "JANE DOE"' : ""}
 PREMISES: ${f.premises || "____"}
-ATTORNEY: ${f.attorneyName || "____"}, Bronx Legal Services
+ATTORNEY: ${f.attorneyName || "____"}${f.firm && f.firm.trim() ? ", " + f.firm.trim() : ""}
 ATTORNEY ADDRESS: ${f.attorneyAddress || "____"}
 ATTORNEY EMAIL/PHONE: ${f.attorneyEmail || "____"} / ${f.attorneyPhone || "____"}
 NUMBER OF NUMBERED PARAGRAPHS IN PETITION: ${f.petitionParagraphs || "(unknown)"}
@@ -600,12 +626,12 @@ HABITABILITY CONDITIONS (if any): ${f.habitabilityConditions || "(none provided)
 3) Attorney affirmation reciting the procedural facts and attaching the predicate documents as exhibits (reference them).
 4) A memorandum of law with: Preliminary Statement; Statement of Facts; a Standard of Review section on CPLR § 3211(a)(7); an Argument with a separately headed Point for each selected defense, fully developed with the cited authority; and a Conclusion.
 5) A word-count certification under 22 NYCRR § 202.8-b.
-Match the persuasive depth and structure of a high-quality Bronx Legal Services memorandum.`,
+Match the persuasive depth and structure of a high-quality legal-services memorandum.`,
     motion_sj: `Draft a NOTICE OF MOTION FOR SUMMARY JUDGMENT plus a supporting ATTORNEY AFFIRMATION, a CLIENT AFFIDAVIT template, and a MEMORANDUM OF LAW for the respondent-tenant under CPLR § 3212, dismissing the petition. Note that issue must be joined. Structure parallel to a motion to dismiss but framed for summary judgment (no triable issue of fact as to the selected defenses). Include the CPLR § 3212 standard and, where useful, CPLR § 409(b) summary determination. Include a word-count certification under 22 NYCRR § 202.8-b. Flag in a bracketed note that an affidavit from a person with knowledge is required.`,
     motion_amend: `Draft a NOTICE OF MOTION FOR LEAVE TO AMEND THE ANSWER plus a supporting ATTORNEY AFFIRMATION and a brief MEMORANDUM OF LAW under CPLR § 3025(b), with the PROPOSED AMENDED ANSWER annexed. Leave is freely given absent prejudice. The proposed amended answer should incorporate the selected defenses and counterclaims in full verified-answer form. Include a word-count certification under 22 NYCRR § 202.8-b.`,
   };
 
-  return `You are assisting a licensed New York attorney at Bronx Legal Services who represents a respondent-tenant in a summary proceeding in Bronx Housing Court. You are drafting a pleading the attorney will review, verify, and file. Write at the level of a strong, persuasive, well-organized legal-services brief: precise, plain, and forceful, never padded.
+  return `You are assisting a licensed New York attorney who represents a respondent-tenant in a summary proceeding in Bronx Housing Court. You are drafting a pleading the attorney will review, verify, and file. Write at the level of a strong, persuasive, well-organized legal-services brief: precise, plain, and forceful, never padded.
 
 ABSOLUTE RULES:
 - Cite ONLY authorities that appear in the ALLOWED AUTHORITIES list below OR in the ATTORNEY'S KNOWLEDGE BASE below. The knowledge base is curated and verified by the attorney; you may rely on its case summaries, holdings, and tactical analysis, and you may cite any case, statute, or regulation it contains. Never invent, paraphrase into existence, or add any authority that appears in NEITHER source. If a proposition needs authority found in neither source, state the proposition without a citation and insert "[ATTORNEY: add authority]".
@@ -827,19 +853,22 @@ export default function App() {
   const [extracting, setExtracting] = useState(false);
   const [docFindings, setDocFindings] = useState([]);
   const [extractNote, setExtractNote] = useState("");
+  const [intakeMode, setIntakeMode] = useState("auto"); // "auto" | "byType"
+  const [autoFiles, setAutoFiles] = useState([]); // [{ name, base64, status, detectedLabel }]
   const outRef = useRef(null);
+  const autoInputRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const r = await storage.get("bxls_key");
+        const r = await storage.get("tdd_key");
         if (r && r.value) {
           setApiKey(r.value);
           setKeySaved(true);
         }
       } catch (e) {}
       try {
-        const k = await storage.get("bxls_kb");
+        const k = await storage.get("tdd_notes");
         if (k && k.value) {
           setKnowledgeBase(k.value);
           setKbSaved(true);
@@ -856,13 +885,13 @@ export default function App() {
 
   const saveKey = async () => {
     try {
-      await storage.set("bxls_key", apiKey.trim());
+      await storage.set("tdd_key", apiKey.trim());
     } catch (e) {}
     setKeySaved(true);
   };
   const clearKey = async () => {
     try {
-      await storage.delete("bxls_key");
+      await storage.delete("tdd_key");
     } catch (e) {}
     setApiKey("");
     setKeySaved(false);
@@ -874,7 +903,7 @@ export default function App() {
   };
   const saveKB = async () => {
     try {
-      await storage.set("bxls_kb", knowledgeBase);
+      await storage.set("tdd_notes", knowledgeBase);
       setKbSaved(true);
     } catch (e) {
       setErr("Could not save the knowledge base to storage: " + String(e.message || e));
@@ -882,7 +911,7 @@ export default function App() {
   };
   const clearKB = async () => {
     try {
-      await storage.delete("bxls_kb");
+      await storage.delete("tdd_notes");
     } catch (e) {}
     setKnowledgeBase("");
     setKbSaved(true);
@@ -898,8 +927,89 @@ export default function App() {
   };
   const removeDoc = (id) => () => setDocFiles((prev) => { const n = { ...prev }; delete n[id]; return n; });
 
-  const uploadedCount = Object.values(docFiles).filter((d) => d?.base64).length;
+  // ---- Auto-detect intake (one pile of PDFs; the model classifies each) ----
+  const pickAutoFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    for (const file of files) {
+      try {
+        const base64 = await fileToBase64(file);
+        setAutoFiles((prev) => [...prev, { name: file.name, base64, status: "ready", detectedLabel: "" }]);
+      } catch (e) {
+        setErr("Could not read file: " + file.name);
+      }
+    }
+  };
+  const removeAutoFile = (idx) => setAutoFiles((prev) => prev.filter((_, i) => i !== idx));
+
+  const uploadedCount =
+    intakeMode === "auto"
+      ? autoFiles.filter((d) => d?.base64).length
+      : Object.values(docFiles).filter((d) => d?.base64).length;
   const kbChars = knowledgeBase.trim().length;
+
+  const extractAuto = async () => {
+    setErr("");
+    setExtractNote("");
+    if (!apiKey.trim()) {
+      setErr("Add your Anthropic API key in Settings first.");
+      return;
+    }
+    const ready = autoFiles.map((d, i) => ({ ...d, i })).filter((d) => d.base64);
+    if (ready.length === 0) {
+      setErr("Upload at least one document to extract.");
+      return;
+    }
+    setExtracting(true);
+    setDocFindings([]);
+    setAutoFiles((prev) => prev.map((d) => (d.base64 ? { ...d, status: "reading" } : d)));
+
+    const prompt = buildAutoExtractionPrompt();
+    const results = await Promise.all(
+      ready.map(async (d) => {
+        try {
+          const text = await callClaude(apiKey.trim(), { prompt, documents: [d.base64], maxTokens: 3000 });
+          const parsed = parseJSON(text);
+          const label = (parsed && (parsed.docLabel || parsed.docType)) || "Unidentified document";
+          setAutoFiles((prev) => prev.map((x, i) => (i === d.i ? { ...x, status: parsed ? "done" : "error", detectedLabel: parsed ? label : "" } : x)));
+          return { label: `${label} — ${d.name}`, parsed };
+        } catch (e) {
+          setAutoFiles((prev) => prev.map((x, i) => (i === d.i ? { ...x, status: "error" } : x)));
+          return { label: d.name, error: String(e.message || e) };
+        }
+      })
+    );
+
+    applyExtractionResults(results);
+    setExtracting(false);
+  };
+
+  // Shared: fold a set of extraction results into the form + findings.
+  const applyExtractionResults = (results) => {
+    let merged = { ...f };
+    const findings = [];
+    let typeSuggestion = "";
+    results.forEach((r) => {
+      if (r.parsed && r.parsed.fields) {
+        merged = mergeExtraction(merged, r.parsed);
+        if (r.parsed.fields.proceedingTypeSuggestion) typeSuggestion = r.parsed.fields.proceedingTypeSuggestion;
+      }
+      if (r.parsed && r.parsed.findings) findings.push({ label: r.label, text: r.parsed.findings });
+      if (r.error) findings.push({ label: r.label, text: "Could not read this document: " + r.error, error: true });
+    });
+
+    let note = "";
+    if (typeSuggestion && /hold/i.test(typeSuggestion) && merged.proceedingType !== "holdover") {
+      merged.proceedingType = "holdover";
+      note = "Petition appears to be a HOLDOVER — proceeding type set to holdover.";
+    } else if (typeSuggestion && /nonpay/i.test(typeSuggestion) && merged.proceedingType !== "nonpayment") {
+      merged.proceedingType = "nonpayment";
+      note = "Petition appears to be a NONPAYMENT — proceeding type set to nonpayment.";
+    }
+
+    setF(merged);
+    setDocFindings(findings);
+    setExtractNote(note);
+  };
 
   const extractAll = async () => {
     setErr("");
@@ -936,30 +1046,7 @@ export default function App() {
       })
     );
 
-    let merged = { ...f };
-    const findings = [];
-    let typeSuggestion = "";
-    results.forEach((r) => {
-      if (r.parsed && r.parsed.fields) {
-        merged = mergeExtraction(merged, r.parsed);
-        if (r.parsed.fields.proceedingTypeSuggestion) typeSuggestion = r.parsed.fields.proceedingTypeSuggestion;
-      }
-      if (r.parsed && r.parsed.findings) findings.push({ label: r.label, text: r.parsed.findings });
-      if (r.error) findings.push({ label: r.label, text: "Could not read this document: " + r.error, error: true });
-    });
-
-    let note = "";
-    if (typeSuggestion && /hold/i.test(typeSuggestion) && merged.proceedingType !== "holdover") {
-      merged.proceedingType = "holdover";
-      note = "Petition appears to be a HOLDOVER — proceeding type set to holdover.";
-    } else if (typeSuggestion && /nonpay/i.test(typeSuggestion) && merged.proceedingType !== "nonpayment") {
-      merged.proceedingType = "nonpayment";
-      note = "Petition appears to be a NONPAYMENT — proceeding type set to nonpayment.";
-    }
-
-    setF(merged);
-    setDocFindings(findings);
-    setExtractNote(note);
+    applyExtractionResults(results);
     setExtracting(false);
   };
 
@@ -1007,8 +1094,8 @@ export default function App() {
       <header style={{ borderBottom: `2px solid ${COLORS.ink}`, padding: "22px 28px 18px", background: COLORS.panel }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: COLORS.accent, fontWeight: 700 }}>Bronx Legal Services · Tenant Defense</div>
-            <h1 style={{ margin: "4px 0 0", fontSize: 30, fontWeight: 700, letterSpacing: -0.4 }}>Pleading Drafter</h1>
+            <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: COLORS.accent, fontWeight: 700 }}>Bronx Housing Court</div>
+            <h1 style={{ margin: "4px 0 0", fontSize: 30, fontWeight: 700, letterSpacing: -0.4 }}>Tenant Defense Drafter</h1>
             <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 3 }}>Bronx Housing Court summary proceedings · responsive pleadings for respondent-tenants · Opus 4.8</div>
           </div>
           <SettingsButton apiKey={apiKey} setApiKey={setApiKey} keySaved={keySaved} saveKey={saveKey} clearKey={clearKey} />
@@ -1087,13 +1174,67 @@ export default function App() {
           <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: -6, marginBottom: 12, lineHeight: 1.45 }}>
             Upload text PDFs from your case file. Opus 4.8 reads each one and fills the intake below. Review everything it extracts. Files are read at intake and held only in this browser session; uploading sends them to the Anthropic API — confirm this is consistent with your office's confidentiality and data-handling policy.
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {DOC_SLOTS.map((s) => (
-              <DocSlot key={s.id} slot={s} data={docFiles[s.id]} onPick={pickDoc(s.id)} onRemove={removeDoc(s.id)} />
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            {[
+              { id: "auto", label: "Auto-detect", hint: "drop everything in; the model identifies each" },
+              { id: "byType", label: "By document type", hint: "one labeled slot per document" },
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setIntakeMode(m.id)}
+                title={m.hint}
+                style={{ flex: 1, padding: "8px 0", border: `1px solid ${intakeMode === m.id ? COLORS.accent : COLORS.line}`, background: intakeMode === m.id ? COLORS.accent : COLORS.panel, color: intakeMode === m.id ? "#fff" : COLORS.ink, borderRadius: 4, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                {m.label}
+              </button>
             ))}
           </div>
+
+          {intakeMode === "byType" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {DOC_SLOTS.map((s) => (
+                <DocSlot key={s.id} slot={s} data={docFiles[s.id]} onPick={pickDoc(s.id)} onRemove={removeDoc(s.id)} />
+              ))}
+            </div>
+          )}
+
+          {intakeMode === "auto" && (
+            <div>
+              <button
+                onClick={() => autoInputRef.current?.click()}
+                style={{ width: "100%", padding: "18px 0", border: `2px dashed ${COLORS.line}`, background: COLORS.panel, color: COLORS.muted, borderRadius: 6, fontFamily: "inherit", fontSize: 13.5, cursor: "pointer" }}
+              >
+                + Add PDFs — select any documents from the case file (you can pick several at once). The model figures out what each one is.
+              </button>
+              <input
+                ref={autoInputRef}
+                type="file"
+                accept="application/pdf"
+                multiple
+                style={{ display: "none" }}
+                onChange={(e) => { pickAutoFiles(e.target.files); e.target.value = ""; }}
+              />
+              {autoFiles.length > 0 && (
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {autoFiles.map((d, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, border: `1px solid ${COLORS.line}`, borderRadius: 5, padding: "7px 10px", background: COLORS.panel }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
+                        <div style={{ fontSize: 11, color: d.status === "error" ? COLORS.accent : COLORS.muted }}>
+                          {d.status === "reading" ? "Reading…" : d.status === "done" ? `Detected: ${d.detectedLabel || "—"}` : d.status === "error" ? "Could not read" : "Ready"}
+                        </div>
+                      </div>
+                      <button onClick={() => removeAutoFile(idx)} style={{ flexShrink: 0, padding: "4px 9px", background: COLORS.panel, color: COLORS.muted, border: `1px solid ${COLORS.line}`, borderRadius: 4, fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
-            onClick={extractAll}
+            onClick={intakeMode === "auto" ? extractAuto : extractAll}
             disabled={extracting || uploadedCount === 0}
             style={{
               width: "100%",
@@ -1220,13 +1361,14 @@ export default function App() {
 
           <SectionTitle n="06" t="Attorney Block" />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Attorney name"><Text value={f.attorneyName} onChange={set("attorneyName")} placeholder="Justin Brown, Of Counsel" /></Field>
+            <Field label="Attorney name"><Text value={f.attorneyName} onChange={set("attorneyName")} placeholder="Jane Attorney, Esq." /></Field>
             <Field label="Petition ¶ count" hint="how many numbered ¶s to answer"><Text value={f.petitionParagraphs} onChange={set("petitionParagraphs")} placeholder="e.g., 11" /></Field>
           </div>
-          <Field label="Office address"><Text value={f.attorneyAddress} onChange={set("attorneyAddress")} placeholder="349 E 149th St, 10th Fl, Bronx, NY 10451" /></Field>
+          <Field label="Firm / office" hint="optional — appears in the signature block; leave blank to omit"><Text value={f.firm} onChange={set("firm")} placeholder="(leave blank to omit)" /></Field>
+          <Field label="Office address"><Text value={f.attorneyAddress} onChange={set("attorneyAddress")} placeholder="Street, Floor, City, NY ZIP" /></Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Email"><Text value={f.attorneyEmail} onChange={set("attorneyEmail")} placeholder="jtbrown@lsnyc.org" /></Field>
-            <Field label="Phone"><Text value={f.attorneyPhone} onChange={set("attorneyPhone")} placeholder="(718) 233-6498" /></Field>
+            <Field label="Email"><Text value={f.attorneyEmail} onChange={set("attorneyEmail")} placeholder="name@example.com" /></Field>
+            <Field label="Phone"><Text value={f.attorneyPhone} onChange={set("attorneyPhone")} placeholder="(___) ___-____" /></Field>
           </div>
         </section>
 
