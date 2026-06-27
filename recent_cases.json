@@ -1,5 +1,31 @@
 [
   {
+    "id": "2025_51956",
+    "cite": "Zotpri LLC v. Burton, 2025 NY Slip Op 51956(U), 87 Misc 3d 1249(A) (Civ. Ct., Bronx County 2025)",
+    "court": "Civ. Ct., Bronx County (Hon. Diane E. Lutwak)",
+    "dateFiled": "2025-12-11",
+    "summary": "Nonpayment. Tenant's motion for leave to file an amended answer (CPLR 3025(b)) GRANTED as to payment and warranty-of-habitability defenses and counterclaims (abatement, order to correct, attorneys' fees): the landlord could show no surprise or prejudice because the pro se answer already raised conditions and payment, and once counsel is retained a tenant should be permitted to amend to get the full benefit of representation (collecting 3225 Holdings v. Imeraj; 699 Venture v. Zuniga). The LACHES defense was STRICKEN as palpably insufficient — pleading only delay (arrears reaching back two years) without the other elements (tenant's lack of knowledge/notice that the landlord would sue, and prejudice) fails (R.M.H. Estates v. Hampshire).",
+    "issues": ["nonpayment", "procedure", "laches", "habitability"],
+    "posture": "MIXED",
+    "subsequentHistoryFlag": "",
+    "source": "packet 2026-03-07",
+    "addedBy": "manual-packet",
+    "addedOn": "2026-06-27"
+  },
+  {
+    "id": "2025_35141",
+    "cite": "2075 Creston Ave. Realty LLC v. Colon, 2025 NY Slip Op 35141(U) (Civ. Ct., Bronx County 2025)",
+    "court": "Civ. Ct., Bronx County (Hon. Agata E. Rumprecht-Behrens)",
+    "dateFiled": "2025-12-23",
+    "summary": "Nonpayment. Tenant granted leave to amend (CPLR 3025(b)) and ample-need discovery (CPLR 408; Farkas) on a rent-overcharge claim. Holding of note: for a tenancy commencing AFTER HSTPA, Regina Metro's retroactivity bar does not apply; under West Pierre Assoc. LLC v. Harvey (1st Dept 2025) and the Rent Stabilization Code amendments, a tenant need only raise an issue that the rent history is UNRELIABLE to obtain discovery — here a certified DHCR history showing an unexplained ~$900 between-tenant increase plus DOB records showing no permitted work sufficed. The landlord's reliance on 1990s cases and a 'fraudulent scheme' standard was misplaced. Discovery demands 1-8 granted; demand #9 (all units 2016-18) stricken as overbroad.",
+    "issues": ["nonpayment", "overcharge", "rent_stabilization", "discovery", "habitability"],
+    "posture": "FAVORABLE",
+    "subsequentHistoryFlag": "",
+    "source": "packet 2026-03-07",
+    "addedBy": "manual-packet",
+    "addedOn": "2026-06-27"
+  },
+  {
     "id": "2026_30008",
     "cite": "BSP GIGI LLC v. Dixon, 2026 NY Slip Op 30008(U) (Civ. Ct., Bronx County 2026)",
     "court": "Civ. Ct., Bronx County (Hon. Agata E. Rumprecht-Behrens)",
