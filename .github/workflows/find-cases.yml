@@ -1,0 +1,57 @@
+name: Find new cases
+
+# Manual on-demand run first (Actions tab → "Find new cases" → Run workflow).
+# When you're happy with what it proposes, uncomment the schedule block below
+# to let it run automatically every Monday.
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days back to search"
+        required: false
+        default: "30"
+      max_additions:
+        description: "Max new cases to propose this run"
+        required: false
+        default: "20"
+      model:
+        description: "Claude model (claude-opus-4-8 or claude-sonnet-4-6 for lower cost)"
+        required: false
+        default: "claude-opus-4-8"
+  # schedule:
+  #   - cron: "0 13 * * 1"   # Mondays 13:00 UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  find-cases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run case-finder
+        env:
+          COURTLISTENER_TOKEN: ${{ secrets.COURTLISTENER_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CASE_DAYS: ${{ github.event.inputs.days || '30' }}
+          MAX_ADDITIONS: ${{ github.event.inputs.max_additions || '20' }}
+          MODEL: ${{ github.event.inputs.model || 'claude-opus-4-8' }}
+          PR_BODY_PATH: ${{ runner.temp }}/pr-body.md
+        run: node tools/find-cases.mjs
+
+      - name: Open pull request with proposals
+        uses: peter-evans/create-pull-request@v6
+        with:
+          base: main
+          branch: case-finder/proposals
+          delete-branch: true
+          add-paths: recent_cases.json
+          commit-message: "Case-finder: propose new cases for review"
+          title: "Case-finder: proposed new cases for review"
+          body-path: ${{ runner.temp }}/pr-body.md

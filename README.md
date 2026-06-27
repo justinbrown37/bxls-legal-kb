@@ -66,6 +66,33 @@ turn on and set a password.
 > individual use; for a wider rollout, add a small backend so the key never
 > reaches the browser.
 
+## Case-finder (proposes new cases for review)
+
+A GitHub Action (`.github/workflows/find-cases.yml`) pulls recent NY decisions
+relevant to NYC Housing Court tenant defense from the **CourtListener** open API
+(public records; no site scraping), has Claude triage and summarize each one,
+and opens a **pull request** proposing additions to `recent_cases.json`. You
+review/Shepardize and merge the ones you want — merging deploys them into the
+app's knowledge base, in a clearly-labeled "recently collected" section separate
+from the hand-curated `legal_kb.json`.
+
+**Setup (one-time):**
+1. Add two repo secrets (Settings → Secrets and variables → Actions):
+   `COURTLISTENER_TOKEN` and `ANTHROPIC_API_KEY`.
+2. Enable Settings → Actions → General → Workflow permissions →
+   **"Allow GitHub Actions to create and approve pull requests."**
+
+**Run it:** Actions tab → **Find new cases** → **Run workflow** (set how many
+days back). It runs on demand only; uncomment the `schedule` block in the
+workflow file to make it weekly.
+
+**Tuning:** edit `COURTS`, `QUERIES`, and the thresholds at the top of
+`tools/find-cases.mjs`. Set the `model` input to `claude-sonnet-4-6` for lower
+cost per run.
+
+> These are authentic published decisions, but no free source is a citator —
+> verify good-law status before relying on any of them in a filing.
+
 ## Confidentiality note
 
 Uploaded documents and the knowledge base are sent to the Anthropic API only
