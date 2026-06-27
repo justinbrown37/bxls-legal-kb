@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "2026_30008",
+    "cite": "BSP GIGI LLC v. Dixon, 2026 NY Slip Op 30008(U) (Civ. Ct., Bronx County 2026)",
+    "court": "Civ. Ct., Bronx County (Hon. Agata E. Rumprecht-Behrens)",
+    "dateFiled": "2026-01-14",
+    "summary": "Nonpayment proceeding DISMISSED for a defective predicate notice under the CARES Act. Where the building has a federally backed multifamily mortgage (15 USC 9058) — including a mortgage that originated with a private lender but was later assigned to Fannie Mae — the landlord must serve a 30-day notice, not the 14-day rent demand. The statute's 'purchased or securitized' language has no exception for privately originated loans later acquired by a federally backed lender. A defective predicate notice cannot be amended (Chinatown), requiring dismissal. Collects Belplain Realty Co. Inc. v. Caro, 85 Misc 3d 1278(A) (Civ. Ct. Bronx 2025) and Andrews Plaza Hous. Assoc. LP v. Rodriguez.",
+    "issues": ["nonpayment", "rent_demand", "predicate_notice", "cares_act"],
+    "posture": "FAVORABLE",
+    "subsequentHistoryFlag": "",
+    "source": "packet 2026-03-07",
+    "addedBy": "manual-packet",
+    "addedOn": "2026-06-27"
+  },
+  {
+    "id": "2026_30001",
+    "cite": "Riverdale HM LLC v. Weissbart, 2026 NY Slip Op 30001(U) (Civ. Ct., Bronx County 2026)",
+    "court": "Civ. Ct., Bronx County (Hon. Rina Gurung)",
+    "dateFiled": "2026-01-05",
+    "summary": "Rent-stabilized nuisance holdover settled by a two-attorney stipulation imposing a 12-month probationary period. The landlord's motion to restore directly for a final judgment of possession and warrant was DENIED. The stipulation, construed by its plain language as a contract (Banos v. Rhea, 25 NY3d 266), unambiguously required the landlord to first move for a HEARING on whether a material breach occurred, and to support that motion with an affidavit from a person with personal knowledge stating the dates, times, and locations of the alleged breach. The landlord skipped the hearing step and its affidavit lacked those specifics, so the motion was denied in its entirety.",
+    "issues": ["holdover", "stipulation_enforcement", "nuisance_holdover", "procedure"],
+    "posture": "FAVORABLE",
+    "subsequentHistoryFlag": "",
+    "source": "packet 2026-03-07",
+    "addedBy": "manual-packet",
+    "addedOn": "2026-06-27"
+  }
+]

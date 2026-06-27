@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { storage } from "./storage";
-import { BUNDLED_KB, KB_META } from "./kb";
+import { BUNDLED_KB, KB_META, recentCasesText } from "./kb";
 
 /*
   Tenant Defense Drafter — v3
@@ -556,17 +556,70 @@ ${EXTRACTION_FIELDS},
 }`;
 }
 
+// Maps each issue-spotter defense (by id) to the shared tag vocabulary used to
+// tag the recent-case corpus, so the right recent decisions surface per matter.
+const TAGS_BY_ISSUE = {
+  demand_mismatch: ["rent_demand"],
+  demand_ledger: ["rent_demand"],
+  rpapl702: ["rent_demand", "late_fees"],
+  demand_future: ["rent_demand"],
+  rpl235e: ["rent_demand"],
+  no_lease_provision: ["predicate_notice"],
+  notice_vague: ["predicate_notice"],
+  notice_dates: ["predicate_notice"],
+  lihtc_hera: ["lihtc_recert"],
+  lihtc_goodcause: ["lihtc_recert"],
+  lihtc_voluntary: ["lihtc_recert"],
+  s8_notice: ["subsidy_section8_fheps"],
+  s8_share: ["subsidy_section8_fheps"],
+  ml_procedure: ["mitchell_lama"],
+  fheps_share: ["subsidy_section8_fheps"],
+  rs_registration: ["rent_stabilization", "mdl_registration"],
+  rs_overcharge: ["overcharge", "rent_stabilization"],
+  woh: ["habitability"],
+  laches: ["laches"],
+  service: ["service_jurisdiction"],
+  fees: ["attorneys_fees"],
+  cofo: ["certificate_of_occupancy"],
+  nop_form: ["predicate_notice", "procedure"],
+};
+
+const REG_TAGS = {
+  rentStabilized: "rent_stabilization",
+  lihtc: "lihtc_recert",
+  section8: "subsidy_section8_fheps",
+  cityFHEPS: "subsidy_section8_fheps",
+  mitchellLama: "mitchell_lama",
+};
+
+// The active tag set for a matter: proceeding type + selected-defense tags +
+// regulatory-status tags. Drives which recent cases get injected.
+function activeTagsFor(f, selectedIssues) {
+  const t = new Set();
+  if (f.proceedingType) t.add(f.proceedingType);
+  (selectedIssues || []).forEach((i) => (TAGS_BY_ISSUE[i.id] || []).forEach((x) => t.add(x)));
+  Object.entries(REG_TAGS).forEach(([k, v]) => { if (f[k]) t.add(v); });
+  if (f.habitability) t.add("habitability");
+  if (f.noValidCofO) t.add("certificate_of_occupancy");
+  if (f.staleRent) t.add("laches");
+  return [...t];
+}
+
 function buildPrompt(f, doc, selectedIssues, docFindings, knowledgeBase) {
   const allowedCites = selectedCiteList(selectedIssues);
   const citeBlock = allowedCites.length ? buildCiteText(allowedCites) : "(none selected)";
 
-  // The curated knowledge base (legal_kb.json) is bundled into the app and is
-  // ALWAYS included. The textarea adds optional, matter-specific supplemental
-  // notes on top of it.
+  // The curated core (legal_kb.json) is always included. The recent-case corpus
+  // is issue-filtered to this matter. The textarea adds optional notes on top.
+  const recentBlock = recentCasesText(activeTagsFor(f, selectedIssues));
   const supplemental = (knowledgeBase || "").trim();
-  const kbBlock = supplemental
-    ? `${BUNDLED_KB}\n\n--- ADDITIONAL ATTORNEY NOTES (entered for this matter) ---\n${supplemental}`
-    : BUNDLED_KB;
+  const kbBlock = [
+    BUNDLED_KB,
+    recentBlock,
+    supplemental ? `--- ADDITIONAL ATTORNEY NOTES (entered for this matter) ---\n${supplemental}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const issueBlock = selectedIssues
     .map(
