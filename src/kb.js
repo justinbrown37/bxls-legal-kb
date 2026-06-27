@@ -6,6 +6,7 @@
 // push — the deploy rebuilds and the live app picks it up automatically. There
 // is no second cite list to keep in sync.
 import kbData from "../legal_kb.json";
+import recentCases from "../recent_cases.json";
 
 const cites = kbData.cites || {};
 const modules = kbData.issueModules || [];
@@ -35,13 +36,34 @@ const moduleBlocks = modules
   })
   .join("\n\n");
 
+// Auto-collected recent decisions (from the CourtListener case-finder). These
+// are quarantined in their own clearly-labeled section so the model treats them
+// as leads that still require independent good-law verification, not as part of
+// the hand-curated library.
+const recentList = (Array.isArray(recentCases) ? recentCases : [])
+  .map((c) => {
+    const head = [c.dateFiled, c.court].filter(Boolean).join(" | ");
+    const tags = Array.isArray(c.issues) && c.issues.length ? ` [issues: ${c.issues.join(", ")}]` : "";
+    const posture = c.posture ? ` [${c.posture}]` : "";
+    return `- ${head ? `(${head}) ` : ""}${c.cite || ""}${posture}${tags}\n  ${c.summary || ""}`;
+  })
+  .join("\n");
+
 export const KB_META = {
   citeCount: Object.keys(cites).length,
   moduleCount: modules.length,
+  recentCount: Array.isArray(recentCases) ? recentCases.length : 0,
 };
+
+const recentBlock = KB_META.recentCount
+  ? `
+
+RECENTLY COLLECTED DECISIONS (${KB_META.recentCount} — auto-gathered from CourtListener and not yet folded into the curated library; you may cite these, but they are leads only — the attorney must independently verify each is still good law before relying on it):
+${recentList}`
+  : "";
 
 export const BUNDLED_KB = `CURATED CASE LIBRARY (${KB_META.citeCount} authorities — every citation below is verified and may be cited):
 ${citeLines}
 
 ISSUE MODULES (${KB_META.moduleCount} — tactical analysis of recurring tenant-defense issues; mine these for the strongest on-point arguments and authority):
-${moduleBlocks}`;
+${moduleBlocks}${recentBlock}`;
