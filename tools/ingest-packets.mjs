@@ -98,7 +98,9 @@ async function extractText(path) {
   if (ext === ".pdf") {
     if (!pdfParse) {
       try {
-        pdfParse = (await import("pdf-parse")).default;
+        // Import the inner module directly; pdf-parse's index.js runs debug
+        // test code under ESM import and would otherwise throw.
+        pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
       } catch (e) {
         throw new Error("pdf-parse not installed — run `npm install` first (it's in package.json).");
       }
