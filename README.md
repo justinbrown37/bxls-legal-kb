@@ -93,6 +93,32 @@ cost per run.
 > These are authentic published decisions, but no free source is a citator —
 > verify good-law status before relying on any of them in a filing.
 
+## Bulk-load your own case packets (local ingest)
+
+`tools/ingest-packets.mjs` reads a local folder of decisions (PDF / HTML / TXT,
+including subfolders), dedupes, summarizes + tags each one via the Anthropic API,
+and appends them to `recent_cases.json` (issue-filtered into drafts like the rest).
+
+**One-time setup:** `npm install` (installs the PDF reader).
+
+**Run it (Windows PowerShell):**
+```
+$env:ANTHROPIC_API_KEY="sk-ant-..."
+node tools/ingest-packets.mjs "C:\Users\you\Documents\HousingCasePackets"
+```
+**Run it (macOS/Linux):**
+```
+ANTHROPIC_API_KEY=sk-ant-... node tools/ingest-packets.mjs "/path/to/folder"
+```
+
+It prints progress, checkpoints every 10 cases, and is safe to re-run (already-
+ingested cases are skipped). Then review and push:
+```
+git add recent_cases.json && git commit -m "Ingest case packets" && git push
+```
+Options: `MODEL=claude-opus-4-8` for max-quality summaries (default is the cheaper
+`claude-sonnet-4-6`); `MAX=25` to cap a run.
+
 ## Confidentiality note
 
 Uploaded documents and the knowledge base are sent to the Anthropic API only
