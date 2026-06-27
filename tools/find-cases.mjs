@@ -69,6 +69,31 @@ const ISSUE_TAGS = [
 
 const clHeaders = { Authorization: `Token ${CL_TOKEN}`, "User-Agent": "tenant-defense-drafter-casefinder" };
 
+const SLEEP = (ms) => new Promise((r) => setTimeout(r, ms));
+const CL_DELAY = parseInt(process.env.CL_DELAY_MS || "1500", 10);
+let lastCl = 0;
+
+// Throttled CourtListener fetch: spaces requests out and backs off on HTTP 429
+// (their API rate-limits bursts).
+async function clFetch(url) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const wait = Math.max(0, CL_DELAY - (Date.now() - lastCl));
+    if (wait) await SLEEP(wait);
+    lastCl = Date.now();
+    const resp = await fetch(url, { headers: clHeaders });
+    if (resp.status === 429) {
+      const ra = parseInt(resp.headers.get("retry-after") || "0", 10);
+      const backoff = ra ? ra * 1000 : 2000 * Math.pow(2, attempt);
+      console.warn(`  … 429 rate-limited; waiting ${Math.round(backoff / 1000)}s and retrying`);
+      await SLEEP(backoff);
+      continue;
+    }
+    return resp;
+  }
+  console.warn("  ! still rate-limited after retries; skipping this request");
+  return { ok: false, status: 429, json: async () => ({}) };
+}
+
 function isoDaysAgo(days) {
   const d = new Date(Date.now() - days * 86400000);
   return d.toISOString().slice(0, 10);
@@ -82,7 +107,7 @@ async function clSearch(query, courtId, filedAfter) {
   url.searchParams.set("filed_after", filedAfter);
   url.searchParams.set("order_by", "dateFiled desc");
   url.searchParams.set("page_size", "10");
-  const resp = await fetch(url, { headers: clHeaders });
+  const resp = await clFetch(url);
   if (!resp.ok) {
     console.warn(`  ! search failed (${courtId}, "${query.slice(0, 30)}…"): HTTP ${resp.status}`);
     return [];
@@ -95,7 +120,7 @@ async function fetchOpinionText(clusterId) {
   const url = new URL("https://www.courtlistener.com/api/rest/v4/opinions/");
   url.searchParams.set("cluster", String(clusterId));
   url.searchParams.set("page_size", "1");
-  const resp = await fetch(url, { headers: clHeaders });
+  const resp = await clFetch(url);
   if (!resp.ok) return "";
   const data = await resp.json();
   const op = (data.results || [])[0] || {};
