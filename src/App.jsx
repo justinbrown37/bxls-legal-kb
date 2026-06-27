@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { storage } from "./storage";
+import { BUNDLED_KB, KB_META } from "./kb";
 
 /*
   BxLS Pleading Drafter — v3
@@ -8,14 +10,17 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
   Attorney-in-the-loop: every output is a DRAFT requiring independent legal
   judgment, verification, and Shepardizing before filing.
 
-  New in v3:
-   - KNOWLEDGE BASE PANEL. Paste your curated knowledge base (cases, issue
-     modules, drafting tactics) ONCE. It is saved to your Claude account
-     (window.storage) and pulled into every draft automatically — no need to
-     re-paste each time. Update it whenever you add cases. The drafter is told
-     it may rely on and cite anything in the knowledge base in addition to the
-     curated CITES library, while still being forbidden from inventing authority
-     that appears in neither source.
+  Standalone web app (v3.x):
+   - Runs as a deployable website (Vite + React), no longer dependent on the
+     Claude.ai Artifact runtime. The Anthropic API key and optional notes are
+     kept in the browser via src/storage.js (localStorage).
+   - SINGLE SOURCE OF TRUTH for the knowledge base: legal_kb.json (repo root) is
+     bundled in via src/kb.js and pulled into every draft automatically. Add or
+     change cases there and push — the deploy rebuilds and the live app updates.
+     The drafter may rely on and cite anything in that knowledge base in
+     addition to the curated CITES library, while still being forbidden from
+     inventing authority that appears in neither source. The Knowledge Base
+     panel's text box is now optional matter-specific notes layered on top.
 
   Carried over from v2:
    - Document intake: upload text PDFs (lease, ledger, HPD, DHCR, ACRIS, etc.).
@@ -529,8 +534,13 @@ function buildPrompt(f, doc, selectedIssues, docFindings, knowledgeBase) {
   const allowedCites = selectedCiteList(selectedIssues);
   const citeBlock = allowedCites.length ? buildCiteText(allowedCites) : "(none selected)";
 
-  const kb = (knowledgeBase || "").trim();
-  const kbBlock = kb ? kb : "(no knowledge base saved — rely on the curated authorities only)";
+  // The curated knowledge base (legal_kb.json) is bundled into the app and is
+  // ALWAYS included. The textarea adds optional, matter-specific supplemental
+  // notes on top of it.
+  const supplemental = (knowledgeBase || "").trim();
+  const kbBlock = supplemental
+    ? `${BUNDLED_KB}\n\n--- ADDITIONAL ATTORNEY NOTES (entered for this matter) ---\n${supplemental}`
+    : BUNDLED_KB;
 
   const issueBlock = selectedIssues
     .map(
@@ -822,14 +832,14 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await window.storage.get("bxls_key");
+        const r = await storage.get("bxls_key");
         if (r && r.value) {
           setApiKey(r.value);
           setKeySaved(true);
         }
       } catch (e) {}
       try {
-        const k = await window.storage.get("bxls_kb");
+        const k = await storage.get("bxls_kb");
         if (k && k.value) {
           setKnowledgeBase(k.value);
           setKbSaved(true);
@@ -846,13 +856,13 @@ export default function App() {
 
   const saveKey = async () => {
     try {
-      await window.storage.set("bxls_key", apiKey.trim());
+      await storage.set("bxls_key", apiKey.trim());
     } catch (e) {}
     setKeySaved(true);
   };
   const clearKey = async () => {
     try {
-      await window.storage.delete("bxls_key");
+      await storage.delete("bxls_key");
     } catch (e) {}
     setApiKey("");
     setKeySaved(false);
@@ -864,7 +874,7 @@ export default function App() {
   };
   const saveKB = async () => {
     try {
-      await window.storage.set("bxls_kb", knowledgeBase);
+      await storage.set("bxls_kb", knowledgeBase);
       setKbSaved(true);
     } catch (e) {
       setErr("Could not save the knowledge base to storage: " + String(e.message || e));
@@ -872,7 +882,7 @@ export default function App() {
   };
   const clearKB = async () => {
     try {
-      await window.storage.delete("bxls_kb");
+      await storage.delete("bxls_kb");
     } catch (e) {}
     setKnowledgeBase("");
     setKbSaved(true);
@@ -960,10 +970,6 @@ export default function App() {
       setErr("Add your Anthropic API key in Settings first.");
       return;
     }
-    if (kbChars > 0 && !kbSaved) {
-      setErr("You have unsaved edits to the knowledge base. Press “Save knowledge base” so the draft uses the current version (or it will use the last saved one).");
-      return;
-    }
     setBusy(true);
     try {
       const prompt = buildPrompt(f, doc, selectedIssues, docFindings, knowledgeBase);
@@ -1017,7 +1023,10 @@ export default function App() {
         <section>
           <SectionTitle n="00" t="Knowledge Base" />
           <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: -6, marginBottom: 10, lineHeight: 1.5 }}>
-            Paste your knowledge base here <strong>once</strong> — your curated cases, the 24 issue modules, and drafting tactics. It is saved to your Claude account and pulled into <em>every</em> draft automatically, so you never paste it again unless you update it. Open your Knowledge Base, select all, copy, paste below, then press Save. To refresh it later, paste the new version over the old and Save again.
+            Your curated knowledge base — <strong>{KB_META.citeCount} cases</strong> and <strong>{KB_META.moduleCount} issue modules</strong> — is built into this app (from <code>legal_kb.json</code>) and pulled into <em>every</em> draft automatically. To add or change cases, edit <code>legal_kb.json</code> in GitHub and the live site updates itself. The box below is optional: add matter-specific notes for this draft only.
+          </div>
+          <div style={{ fontSize: 12, color: COLORS.strong, background: "#eef3ee", border: `1px solid ${COLORS.strong}`, borderRadius: 5, padding: "8px 11px", marginBottom: 10, lineHeight: 1.45 }}>
+            ● Built-in knowledge base loaded: {KB_META.citeCount.toLocaleString()} authorities + {KB_META.moduleCount} issue modules, active on every draft.
           </div>
           <div style={{ border: `1px solid ${kbChars > 0 ? COLORS.strong : COLORS.line}`, borderRadius: 6, background: COLORS.panel, padding: "12px 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
@@ -1030,11 +1039,11 @@ export default function App() {
                     letterSpacing: 0.3,
                     padding: "2px 8px",
                     borderRadius: 3,
-                    color: !kbLoaded ? COLORS.muted : kbChars === 0 ? COLORS.accent : kbSaved ? COLORS.strong : COLORS.moderate,
-                    background: !kbLoaded ? "#f1ede3" : kbChars === 0 ? "#f7ecec" : kbSaved ? "#eef3ee" : "#f6efe0",
+                    color: !kbLoaded ? COLORS.muted : kbChars === 0 ? COLORS.muted : kbSaved ? COLORS.strong : COLORS.moderate,
+                    background: !kbLoaded ? "#f1ede3" : kbChars === 0 ? "#f1ede3" : kbSaved ? "#eef3ee" : "#f6efe0",
                   }}
                 >
-                  {!kbLoaded ? "Loading…" : kbChars === 0 ? "Empty — not yet saved" : kbSaved ? "● Saved & in use" : "Unsaved changes"}
+                  {!kbLoaded ? "Loading…" : kbChars === 0 ? "No extra notes" : kbSaved ? "● Notes saved" : "Unsaved notes"}
                 </span>
                 {kbChars > 0 && (
                   <span style={{ fontSize: 11.5, color: COLORS.muted }}>{kbChars.toLocaleString()} characters</span>
@@ -1056,7 +1065,7 @@ export default function App() {
                     cursor: kbSaved && kbChars > 0 ? "default" : "pointer",
                   }}
                 >
-                  {kbSaved && kbChars > 0 ? "Saved" : "Save knowledge base"}
+                  {kbSaved && kbChars > 0 ? "Saved" : "Save notes"}
                 </button>
                 <button onClick={clearKB} style={{ padding: "7px 12px", background: COLORS.panel, color: COLORS.muted, border: `1px solid ${COLORS.line}`, borderRadius: 4, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}>
                   Clear
@@ -1067,10 +1076,10 @@ export default function App() {
               value={knowledgeBase}
               onChange={onKbChange}
               rows={8}
-              placeholder="Paste your full knowledge base here — cases (with citations), the 24 issue-spotting modules, holdings, and drafting tactics. The drafter is allowed to cite anything you put here, in addition to the built-in library."
+              placeholder="Optional: matter-specific notes for this draft — extra facts, a case you want emphasized, or instructions. The built-in knowledge base above is always included; anything here is added on top."
             />
             <div style={{ fontSize: 11.5, color: COLORS.muted, marginTop: 6, fontStyle: "italic" }}>
-              Saved privately to your Claude account (window.storage) — it stays on Anthropic's servers tied to your sign-in and is sent only when you draft. It is not posted publicly or shared with other users.
+              Optional notes are saved only in this browser on this device (local storage) and are sent to Anthropic only when you draft. The built-in knowledge base is always active and needs no saving.
             </div>
           </div>
 
@@ -1276,17 +1285,10 @@ export default function App() {
                 </div>
               )}
 
-              {kbChars > 0 && kbSaved && (
-                <div style={{ fontSize: 11.5, color: COLORS.strong, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 8, background: COLORS.strong, display: "inline-block" }} />
-                  Drawing on your saved knowledge base ({kbChars.toLocaleString()} characters).
-                </div>
-              )}
-              {kbChars > 0 && !kbSaved && (
-                <div style={{ fontSize: 11.5, color: COLORS.moderate, marginBottom: 10 }}>
-                  Knowledge base has unsaved edits — Save it above so this draft uses the current version.
-                </div>
-              )}
+              <div style={{ fontSize: 11.5, color: COLORS.strong, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 8, background: COLORS.strong, display: "inline-block" }} />
+                Drawing on the built-in knowledge base ({KB_META.citeCount} cases + {KB_META.moduleCount} modules){kbChars > 0 ? ` plus your notes (${kbChars.toLocaleString()} chars)` : ""}.
+              </div>
 
               <button onClick={generate} disabled={busy} style={{ width: "100%", padding: "13px 0", background: busy ? COLORS.muted : COLORS.accent, color: "#fff", border: "none", borderRadius: 5, fontFamily: "inherit", fontSize: 15, fontWeight: 700, letterSpacing: 0.3, cursor: busy ? "default" : "pointer" }}>
                 {busy ? "Drafting…" : `Draft ${docTabs.find((t) => t.id === doc).label}`}
